@@ -1,0 +1,33 @@
+name: Release
+
+# Push a tag like v0.1.0 (matching lib/fastlane/plugin/swiftshot/version.rb) to publish the gem.
+on:
+  push:
+    tags: ["v*"]
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    environment: release
+    permissions:
+      id-token: write   # trusted publishing to RubyGems.org
+      contents: write
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+
+      - uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: ruby
+          bundler-cache: true
+
+      - name: Tag matches the gem version
+        run: |
+          version=$(ruby -r ./lib/fastlane/plugin/swiftshot/version -e 'print Fastlane::Swiftshot::VERSION')
+          test "v$version" = "$GITHUB_REF_NAME" || { echo "::error::tag $GITHUB_REF_NAME, gem $version"; exit 1; }
+
+      - run: bundle exec rspec
+      - run: bundle exec rubocop
+
+      - uses: rubygems/release-gem@v1
